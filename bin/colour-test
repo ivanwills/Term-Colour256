@@ -1,0 +1,489 @@
+#!/usr/bin/perl
+
+# Created on: 2010-09-23 13:57:38
+# Create by:  dev
+# $Id$
+# $Revision$, $HeadURL$, $Date$
+# $Revision$, $Source$, $Date$
+
+use strict;
+use warnings;
+use version;
+use Scalar::Util;
+use List::Util;
+#use List::MoreUtils;
+use Getopt::Long;
+use Pod::Usage;
+use Data::Dumper qw/Dumper/;
+use English qw/ -no_match_vars /;
+use FindBin qw/$Bin/;
+use Term::Colour256 qw/colour/;
+
+our $VERSION = version->new('0.0.1');
+my ($name)   = $PROGRAM_NAME =~ m{^.*/(.*?)$}mxs;
+
+my %option = (
+    reverse => 0,
+    verbose => 0,
+    man     => 0,
+    help    => 0,
+    VERSION => 0,
+);
+
+my %COLOUR_NUMBERED = colours();
+my %COLOUR_RGB;
+for my $num ( keys %COLOUR_NUMBERED ) {
+    my ($r, $g, $b) = @{ $COLOUR_NUMBERED{$num}{colours} };
+    $COLOUR_RGB{$r}{$g}{$b} = { number => $num, ascii => $COLOUR_NUMBERED{$num}{ascii} };
+}
+my %MODIFIERS = (
+	RESET     => '\e[0m',
+	BOLD      => '\e[03;3m',
+	UNDERLINE => '\e[04;3m',
+	BLINK     => '\e[05;3m',
+);
+
+main();
+exit 0;
+
+sub main {
+
+    Getopt::Long::Configure('bundling');
+    GetOptions(
+        \%option,
+        'background|b',
+        'modifier|m=s',
+        'reverse|r+',
+        'verbose|v+',
+        'man',
+        'help',
+        'VERSION!',
+    ) or pod2usage(2);
+
+    if ( $option{'VERSION'} ) {
+        print "$name Version = $VERSION\n";
+        exit 1;
+    }
+    elsif ( $option{'man'} ) {
+        pod2usage( -verbose => 2 );
+    }
+    elsif ( $option{'help'} ) {
+        pod2usage( -verbose => 1 );
+    }
+
+    # check if there are any modifiers
+    if ( $option{modifier} && $MODIFIERS{uc $option{modifier}} ) {
+        print $MODIFIERS{uc $option{modifier}};
+    }
+
+    # show the colours
+    my $style   = shift @ARGV;
+    my $numbers = Term::Colour256::map_numbers();
+
+    if ( !$style ) {
+        for my $number ( 1 .. 255 ) {
+            printf "%s%4d %s/%s/%s\n", colour( ( $option{background} ? 'on' : () ), $number ), $number, @{ $numbers->{$number}{rgb} };
+        }
+    }
+    elsif ( $style eq 'compare' ) {
+        my %map = qw//;
+        my @range = $option{reverse} ? 1 .. 8 : 1 .. 15;
+        for my $i ( @range ) {
+            my $a = $i < 10 ? "00$i" : $i < 100 ? "0$i" : $i;
+
+            print "\e[38;5;${i}m $a \e[0m\e[48;5;${i}m $a \e[0m\n";
+
+            if ($map{$i}) {
+                $a = $map{$i} < 10 ? "00$map{$i}" : $map{$i} < 100 ? "0$map{$i}" : $map{$i};
+                print "\e[38;5;$map{$i}m $a \e[0m\e[48;5;$map{$i}m $a \e[0m\n";
+            }
+
+            if ( $option{reverse} ) {
+                $i += 8;
+                $a = $i < 10 ? "00$i" : $i < 100 ? "0$i" : $i;
+                print "\e[38;5;${i}m $a \e[0m\e[48;5;${i}m $a \e[0m\n";
+            }
+        }
+    }
+    elsif ( $style ) {
+        my @grey;
+        my @R = sort { hex $a <=> hex $b } keys %COLOUR_RGB;
+        @R = reverse @R if $option{reverse};
+        for my $r ( @R ) {
+            my @G = sort { hex $a <=> hex $b } keys %{ $COLOUR_RGB{$r} };
+            @G = reverse @G if $option{reverse} > 1;
+            for my $g (@G) {
+                my $printed = 0;
+                my @b;
+                my @out;
+                my @full;
+                my @B = sort { hex $a <=> hex $b } keys %{ $COLOUR_RGB{$r}{$g} };
+                @B = reverse @B if $option{reverse} > 2;
+                for my $b (@B) {
+                    if ($option{background} ) {
+                        $COLOUR_RGB{$r}{$g}{$b}{ascii} =~ s/38/48/;
+                    }
+                    my $number = $COLOUR_RGB{$r}{$g}{$b}{number};
+                    push @out, sprintf "%s%s/%s/%s %s ", $COLOUR_RGB{$r}{$g}{$b}{ascii}, $r, $g, $b, $number < 10 ? "  $number" : $number < 100 ? " $number" : $number;
+                    push @full, $out[-1];
+                    if ($r eq $g && $g eq $b ) {
+                        push @grey, pop @out;
+                    }
+                    else {
+                        $printed++;
+                    }
+                    push @b, $b;
+                }
+                print $printed == 5 ? @full : @out;
+                print "\n" if $printed;
+            }
+        }
+        my $i = 1;
+        for my $grey (@grey) {;
+            print $grey;
+            print "\n" if $i++ % 6 == 0;
+        }
+    }
+
+    return;
+}
+
+sub colours {
+    return (
+# NO_COLOUR   => "\e[0m"
+# BLACK       => "\e[0;30m"
+# RED         => "\e[0;31m"
+# GREEN       => "\e[0;32m"
+# BROWN       => "\e[0;33m"
+# BLUE        => "\e[0;34m"
+# PURPLE      => "\e[0;35m"
+# CYAN        => "\e[0;36m"
+# LIGHT_GRAY  => "\e[0;37m"
+# DARK_GRAY   => "\e[1;30m"
+# LIGHT_RED   => "\e[1;31m"
+# LIGHT_GREEN => "\e[1;32m"
+# YELLOW      => "\e[1;33m"
+# LIGHT_BLUE  => "\e[1;34m"
+# LIGHT_PURPLE=> "\e[1;35m"
+# LIGHT_CYAN  => "\e[1;36m"
+# WHITE       => "\e[1;37m"
+#     1   => { ascii => "\e[38;5;1m"  , colours => [qw/ff 00 00/], },
+#     2   => { ascii => "\e[38;5;2m"  , colours => [qw/00 00 00/], },
+#     3   => { ascii => "\e[38;5;3m"  , colours => [qw/00 00 00/], },
+#     4   => { ascii => "\e[38;5;4m"  , colours => [qw/00 00 00/], },
+#     5   => { ascii => "\e[38;5;5m"  , colours => [qw/00 00 00/], },
+#     6   => { ascii => "\e[38;5;6m"  , colours => [qw/00 00 00/], },
+#     7   => { ascii => "\e[38;5;7m"  , colours => [qw/00 00 00/], },
+#     8   => { ascii => "\e[38;5;8m"  , colours => [qw/00 00 00/], },
+#     9   => { ascii => "\e[38;5;9m"  , colours => [qw/00 00 00/], },
+#    10   => { ascii => "\e[38;5;10m" , colours => [qw/00 00 00/], },
+#    11   => { ascii => "\e[38;5;11m" , colours => [qw/00 00 00/], },
+#    12   => { ascii => "\e[38;5;12m" , colours => [qw/00 00 00/], },
+#    13   => { ascii => "\e[38;5;13m" , colours => [qw/00 00 00/], },
+#    14   => { ascii => "\e[38;5;14m" , colours => [qw/00 00 00/], },
+#    15   => { ascii => "\e[38;5;15m" , colours => [qw/00 00 00/], },
+    16   => { ascii => "\e[38;5;16m" , colours => [qw/00 00 00/], },
+    17   => { ascii => "\e[38;5;17m" , colours => [qw/00 00 5f/], },
+    18   => { ascii => "\e[38;5;18m" , colours => [qw/00 00 87/], },
+    19   => { ascii => "\e[38;5;19m" , colours => [qw/00 00 af/], },
+    20   => { ascii => "\e[38;5;20m" , colours => [qw/00 00 d7/], },
+    21   => { ascii => "\e[38;5;21m" , colours => [qw/00 00 ff/], },
+    22   => { ascii => "\e[38;5;22m" , colours => [qw/00 5f 00/], },
+    23   => { ascii => "\e[38;5;23m" , colours => [qw/00 5f 5f/], },
+    24   => { ascii => "\e[38;5;24m" , colours => [qw/00 5f 87/], },
+    25   => { ascii => "\e[38;5;25m" , colours => [qw/00 5f af/], },
+    26   => { ascii => "\e[38;5;26m" , colours => [qw/00 5f d7/], },
+    27   => { ascii => "\e[38;5;27m" , colours => [qw/00 5f ff/], },
+    28   => { ascii => "\e[38;5;28m" , colours => [qw/00 87 00/], },
+    29   => { ascii => "\e[38;5;29m" , colours => [qw/00 87 5f/], },
+    30   => { ascii => "\e[38;5;30m" , colours => [qw/00 87 87/], },
+    31   => { ascii => "\e[38;5;31m" , colours => [qw/00 87 af/], },
+    32   => { ascii => "\e[38;5;32m" , colours => [qw/00 87 d7/], },
+    33   => { ascii => "\e[38;5;33m" , colours => [qw/00 87 ff/], },
+    34   => { ascii => "\e[38;5;34m" , colours => [qw/00 af 00/], },
+    35   => { ascii => "\e[38;5;35m" , colours => [qw/00 af 5f/], },
+    36   => { ascii => "\e[38;5;36m" , colours => [qw/00 af 87/], },
+    37   => { ascii => "\e[38;5;37m" , colours => [qw/00 af af/], },
+    38   => { ascii => "\e[38;5;38m" , colours => [qw/00 af d7/], },
+    39   => { ascii => "\e[38;5;39m" , colours => [qw/00 af ff/], },
+    40   => { ascii => "\e[38;5;40m" , colours => [qw/00 d7 00/], },
+    41   => { ascii => "\e[38;5;41m" , colours => [qw/00 d7 5f/], },
+    42   => { ascii => "\e[38;5;42m" , colours => [qw/00 d7 87/], },
+    43   => { ascii => "\e[38;5;43m" , colours => [qw/00 d7 af/], },
+    44   => { ascii => "\e[38;5;44m" , colours => [qw/00 d7 d7/], },
+    45   => { ascii => "\e[38;5;45m" , colours => [qw/00 d7 ff/], },
+    46   => { ascii => "\e[38;5;46m" , colours => [qw/00 ff 00/], },
+    47   => { ascii => "\e[38;5;47m" , colours => [qw/00 ff 5f/], },
+    48   => { ascii => "\e[38;5;48m" , colours => [qw/00 ff 87/], },
+    49   => { ascii => "\e[38;5;49m" , colours => [qw/00 ff af/], },
+    50   => { ascii => "\e[38;5;50m" , colours => [qw/00 ff d7/], },
+    51   => { ascii => "\e[38;5;51m" , colours => [qw/00 ff ff/], },
+    52   => { ascii => "\e[38;5;52m" , colours => [qw/5f 00 00/], },
+    53   => { ascii => "\e[38;5;53m" , colours => [qw/5f 00 5f/], },
+    54   => { ascii => "\e[38;5;54m" , colours => [qw/5f 00 87/], },
+    55   => { ascii => "\e[38;5;55m" , colours => [qw/5f 00 af/], },
+    56   => { ascii => "\e[38;5;56m" , colours => [qw/5f 00 d7/], },
+    57   => { ascii => "\e[38;5;57m" , colours => [qw/5f 00 ff/], },
+    58   => { ascii => "\e[38;5;58m" , colours => [qw/5f 5f 00/], },
+    59   => { ascii => "\e[38;5;59m" , colours => [qw/5f 5f 5f/], },
+    60   => { ascii => "\e[38;5;60m" , colours => [qw/5f 5f 87/], },
+    61   => { ascii => "\e[38;5;61m" , colours => [qw/5f 5f af/], },
+    62   => { ascii => "\e[38;5;62m" , colours => [qw/5f 5f d7/], },
+    63   => { ascii => "\e[38;5;63m" , colours => [qw/5f 5f ff/], },
+    64   => { ascii => "\e[38;5;64m" , colours => [qw/5f 87 00/], },
+    65   => { ascii => "\e[38;5;65m" , colours => [qw/5f 87 5f/], },
+    66   => { ascii => "\e[38;5;66m" , colours => [qw/5f 87 87/], },
+    67   => { ascii => "\e[38;5;67m" , colours => [qw/5f 87 af/], },
+    68   => { ascii => "\e[38;5;68m" , colours => [qw/5f 87 d7/], },
+    69   => { ascii => "\e[38;5;69m" , colours => [qw/5f 87 ff/], },
+    70   => { ascii => "\e[38;5;70m" , colours => [qw/5f af 00/], },
+    71   => { ascii => "\e[38;5;71m" , colours => [qw/5f af 5f/], },
+    72   => { ascii => "\e[38;5;72m" , colours => [qw/5f af 87/], },
+    73   => { ascii => "\e[38;5;73m" , colours => [qw/5f af af/], },
+    74   => { ascii => "\e[38;5;74m" , colours => [qw/5f af d7/], },
+    75   => { ascii => "\e[38;5;75m" , colours => [qw/5f af ff/], },
+    76   => { ascii => "\e[38;5;76m" , colours => [qw/5f d7 00/], },
+    77   => { ascii => "\e[38;5;77m" , colours => [qw/5f d7 5f/], },
+    78   => { ascii => "\e[38;5;78m" , colours => [qw/5f d7 87/], },
+    79   => { ascii => "\e[38;5;79m" , colours => [qw/5f d7 af/], },
+    80   => { ascii => "\e[38;5;80m" , colours => [qw/5f d7 d7/], },
+    81   => { ascii => "\e[38;5;81m" , colours => [qw/5f d7 ff/], },
+    82   => { ascii => "\e[38;5;82m" , colours => [qw/5f ff 00/], },
+    83   => { ascii => "\e[38;5;83m" , colours => [qw/5f ff 5f/], },
+    84   => { ascii => "\e[38;5;84m" , colours => [qw/5f ff 87/], },
+    85   => { ascii => "\e[38;5;85m" , colours => [qw/5f ff af/], },
+    86   => { ascii => "\e[38;5;86m" , colours => [qw/5f ff d7/], },
+    87   => { ascii => "\e[38;5;87m" , colours => [qw/5f ff ff/], },
+    88   => { ascii => "\e[38;5;88m" , colours => [qw/87 00 00/], },
+    89   => { ascii => "\e[38;5;89m" , colours => [qw/87 00 5f/], },
+    90   => { ascii => "\e[38;5;90m" , colours => [qw/87 00 87/], },
+    91   => { ascii => "\e[38;5;91m" , colours => [qw/87 00 af/], },
+    92   => { ascii => "\e[38;5;92m" , colours => [qw/87 00 d7/], },
+    93   => { ascii => "\e[38;5;93m" , colours => [qw/87 00 ff/], },
+    94   => { ascii => "\e[38;5;94m" , colours => [qw/87 5f 00/], },
+    95   => { ascii => "\e[38;5;95m" , colours => [qw/87 5f 5f/], },
+    96   => { ascii => "\e[38;5;96m" , colours => [qw/87 5f 87/], },
+    97   => { ascii => "\e[38;5;97m" , colours => [qw/87 5f af/], },
+    98   => { ascii => "\e[38;5;98m" , colours => [qw/87 5f d7/], },
+    99   => { ascii => "\e[38;5;99m" , colours => [qw/87 5f ff/], },
+    100  => { ascii => "\e[38;5;100m", colours => [qw/87 87 00/], },
+    101  => { ascii => "\e[38;5;101m", colours => [qw/87 87 5f/], },
+    102  => { ascii => "\e[38;5;102m", colours => [qw/87 87 87/], },
+    103  => { ascii => "\e[38;5;103m", colours => [qw/87 87 af/], },
+    104  => { ascii => "\e[38;5;104m", colours => [qw/87 87 d7/], },
+    105  => { ascii => "\e[38;5;105m", colours => [qw/87 87 ff/], },
+    106  => { ascii => "\e[38;5;106m", colours => [qw/87 af 00/], },
+    107  => { ascii => "\e[38;5;107m", colours => [qw/87 af 5f/], },
+    108  => { ascii => "\e[38;5;108m", colours => [qw/87 af 87/], },
+    109  => { ascii => "\e[38;5;109m", colours => [qw/87 af af/], },
+    110  => { ascii => "\e[38;5;110m", colours => [qw/87 af d7/], },
+    111  => { ascii => "\e[38;5;111m", colours => [qw/87 af ff/], },
+    112  => { ascii => "\e[38;5;112m", colours => [qw/87 d7 00/], },
+    113  => { ascii => "\e[38;5;113m", colours => [qw/87 d7 5f/], },
+    114  => { ascii => "\e[38;5;114m", colours => [qw/87 d7 87/], },
+    115  => { ascii => "\e[38;5;115m", colours => [qw/87 d7 af/], },
+    116  => { ascii => "\e[38;5;116m", colours => [qw/87 d7 d7/], },
+    117  => { ascii => "\e[38;5;117m", colours => [qw/87 d7 ff/], },
+    118  => { ascii => "\e[38;5;118m", colours => [qw/87 ff 00/], },
+    119  => { ascii => "\e[38;5;119m", colours => [qw/87 ff 5f/], },
+    120  => { ascii => "\e[38;5;120m", colours => [qw/87 ff 87/], },
+    121  => { ascii => "\e[38;5;121m", colours => [qw/87 ff af/], },
+    122  => { ascii => "\e[38;5;122m", colours => [qw/87 ff d7/], },
+    123  => { ascii => "\e[38;5;123m", colours => [qw/87 ff ff/], },
+    124  => { ascii => "\e[38;5;124m", colours => [qw/af 00 00/], },
+    125  => { ascii => "\e[38;5;125m", colours => [qw/af 00 5f/], },
+    126  => { ascii => "\e[38;5;126m", colours => [qw/af 00 87/], },
+    127  => { ascii => "\e[38;5;127m", colours => [qw/af 00 af/], },
+    128  => { ascii => "\e[38;5;128m", colours => [qw/af 00 d7/], },
+    129  => { ascii => "\e[38;5;129m", colours => [qw/af 00 ff/], },
+    130  => { ascii => "\e[38;5;130m", colours => [qw/af 5f 00/], },
+    131  => { ascii => "\e[38;5;131m", colours => [qw/af 5f 5f/], },
+    132  => { ascii => "\e[38;5;132m", colours => [qw/af 5f 87/], },
+    133  => { ascii => "\e[38;5;133m", colours => [qw/af 5f af/], },
+    134  => { ascii => "\e[38;5;134m", colours => [qw/af 5f d7/], },
+    135  => { ascii => "\e[38;5;135m", colours => [qw/af 5f ff/], },
+    136  => { ascii => "\e[38;5;136m", colours => [qw/af 87 00/], },
+    137  => { ascii => "\e[38;5;137m", colours => [qw/af 87 5f/], },
+    138  => { ascii => "\e[38;5;138m", colours => [qw/af 87 87/], },
+    139  => { ascii => "\e[38;5;139m", colours => [qw/af 87 af/], },
+    140  => { ascii => "\e[38;5;140m", colours => [qw/af 87 d7/], },
+    141  => { ascii => "\e[38;5;141m", colours => [qw/af 87 ff/], },
+    142  => { ascii => "\e[38;5;142m", colours => [qw/af af 00/], },
+    143  => { ascii => "\e[38;5;143m", colours => [qw/af af 5f/], },
+    144  => { ascii => "\e[38;5;144m", colours => [qw/af af 87/], },
+    145  => { ascii => "\e[38;5;145m", colours => [qw/af af af/], },
+    146  => { ascii => "\e[38;5;146m", colours => [qw/af af d7/], },
+    147  => { ascii => "\e[38;5;147m", colours => [qw/af af ff/], },
+    148  => { ascii => "\e[38;5;148m", colours => [qw/af d7 00/], },
+    149  => { ascii => "\e[38;5;149m", colours => [qw/af d7 5f/], },
+    150  => { ascii => "\e[38;5;150m", colours => [qw/af d7 87/], },
+    151  => { ascii => "\e[38;5;151m", colours => [qw/af d7 af/], },
+    152  => { ascii => "\e[38;5;152m", colours => [qw/af d7 d7/], },
+    153  => { ascii => "\e[38;5;153m", colours => [qw/af d7 ff/], },
+    154  => { ascii => "\e[38;5;154m", colours => [qw/af ff 00/], },
+    155  => { ascii => "\e[38;5;155m", colours => [qw/af ff 5f/], },
+    156  => { ascii => "\e[38;5;156m", colours => [qw/af ff 87/], },
+    157  => { ascii => "\e[38;5;157m", colours => [qw/af ff af/], },
+    158  => { ascii => "\e[38;5;158m", colours => [qw/af ff d7/], },
+    159  => { ascii => "\e[38;5;159m", colours => [qw/af ff ff/], },
+    160  => { ascii => "\e[38;5;160m", colours => [qw/d7 00 00/], },
+    161  => { ascii => "\e[38;5;161m", colours => [qw/d7 00 5f/], },
+    162  => { ascii => "\e[38;5;162m", colours => [qw/d7 00 87/], },
+    163  => { ascii => "\e[38;5;163m", colours => [qw/d7 00 af/], },
+    164  => { ascii => "\e[38;5;164m", colours => [qw/d7 00 d7/], },
+    165  => { ascii => "\e[38;5;165m", colours => [qw/d7 00 ff/], },
+    166  => { ascii => "\e[38;5;166m", colours => [qw/d7 5f 00/], },
+    167  => { ascii => "\e[38;5;167m", colours => [qw/d7 5f 5f/], },
+    168  => { ascii => "\e[38;5;168m", colours => [qw/d7 5f 87/], },
+    169  => { ascii => "\e[38;5;169m", colours => [qw/d7 5f af/], },
+    170  => { ascii => "\e[38;5;170m", colours => [qw/d7 5f d7/], },
+    171  => { ascii => "\e[38;5;171m", colours => [qw/d7 5f ff/], },
+    172  => { ascii => "\e[38;5;172m", colours => [qw/d7 87 00/], },
+    173  => { ascii => "\e[38;5;173m", colours => [qw/d7 87 5f/], },
+    174  => { ascii => "\e[38;5;174m", colours => [qw/d7 87 87/], },
+    175  => { ascii => "\e[38;5;175m", colours => [qw/d7 87 af/], },
+    176  => { ascii => "\e[38;5;176m", colours => [qw/d7 87 d7/], },
+    177  => { ascii => "\e[38;5;177m", colours => [qw/d7 87 ff/], },
+    178  => { ascii => "\e[38;5;178m", colours => [qw/d7 af 00/], },
+    179  => { ascii => "\e[38;5;179m", colours => [qw/d7 af 5f/], },
+    180  => { ascii => "\e[38;5;180m", colours => [qw/d7 af 87/], },
+    181  => { ascii => "\e[38;5;181m", colours => [qw/d7 af af/], },
+    182  => { ascii => "\e[38;5;182m", colours => [qw/d7 af d7/], },
+    183  => { ascii => "\e[38;5;183m", colours => [qw/d7 af ff/], },
+    184  => { ascii => "\e[38;5;184m", colours => [qw/d7 d7 00/], },
+    185  => { ascii => "\e[38;5;185m", colours => [qw/d7 d7 5f/], },
+    186  => { ascii => "\e[38;5;186m", colours => [qw/d7 d7 87/], },
+    187  => { ascii => "\e[38;5;187m", colours => [qw/d7 d7 af/], },
+    188  => { ascii => "\e[38;5;188m", colours => [qw/d7 d7 d7/], },
+    189  => { ascii => "\e[38;5;189m", colours => [qw/d7 d7 ff/], },
+    190  => { ascii => "\e[38;5;190m", colours => [qw/d7 ff 00/], },
+    191  => { ascii => "\e[38;5;191m", colours => [qw/d7 ff 5f/], },
+    192  => { ascii => "\e[38;5;192m", colours => [qw/d7 ff 87/], },
+    193  => { ascii => "\e[38;5;193m", colours => [qw/d7 ff af/], },
+    194  => { ascii => "\e[38;5;194m", colours => [qw/d7 ff d7/], },
+    195  => { ascii => "\e[38;5;195m", colours => [qw/d7 ff ff/], },
+    196  => { ascii => "\e[38;5;196m", colours => [qw/ff 00 00/], },
+    197  => { ascii => "\e[38;5;197m", colours => [qw/ff 00 5f/], },
+    198  => { ascii => "\e[38;5;198m", colours => [qw/ff 00 87/], },
+    199  => { ascii => "\e[38;5;199m", colours => [qw/ff 00 af/], },
+    200  => { ascii => "\e[38;5;200m", colours => [qw/ff 00 d7/], },
+    201  => { ascii => "\e[38;5;201m", colours => [qw/ff 00 ff/], },
+    202  => { ascii => "\e[38;5;202m", colours => [qw/ff 5f 00/], },
+    203  => { ascii => "\e[38;5;203m", colours => [qw/ff 5f 5f/], },
+    204  => { ascii => "\e[38;5;204m", colours => [qw/ff 5f 87/], },
+    205  => { ascii => "\e[38;5;205m", colours => [qw/ff 5f af/], },
+    206  => { ascii => "\e[38;5;206m", colours => [qw/ff 5f d7/], },
+    207  => { ascii => "\e[38;5;207m", colours => [qw/ff 5f ff/], },
+    208  => { ascii => "\e[38;5;208m", colours => [qw/ff 87 00/], },
+    209  => { ascii => "\e[38;5;209m", colours => [qw/ff 87 5f/], },
+    210  => { ascii => "\e[38;5;210m", colours => [qw/ff 87 87/], },
+    211  => { ascii => "\e[38;5;211m", colours => [qw/ff 87 af/], },
+    212  => { ascii => "\e[38;5;212m", colours => [qw/ff 87 d7/], },
+    213  => { ascii => "\e[38;5;213m", colours => [qw/ff 87 ff/], },
+    214  => { ascii => "\e[38;5;214m", colours => [qw/ff af 00/], },
+    215  => { ascii => "\e[38;5;215m", colours => [qw/ff af 5f/], },
+    216  => { ascii => "\e[38;5;216m", colours => [qw/ff af 87/], },
+    217  => { ascii => "\e[38;5;217m", colours => [qw/ff af af/], },
+    218  => { ascii => "\e[38;5;218m", colours => [qw/ff af d7/], },
+    219  => { ascii => "\e[38;5;219m", colours => [qw/ff af ff/], },
+    220  => { ascii => "\e[38;5;220m", colours => [qw/ff d7 00/], },
+    221  => { ascii => "\e[38;5;221m", colours => [qw/ff d7 5f/], },
+    222  => { ascii => "\e[38;5;222m", colours => [qw/ff d7 87/], },
+    223  => { ascii => "\e[38;5;223m", colours => [qw/ff d7 af/], },
+    224  => { ascii => "\e[38;5;224m", colours => [qw/ff d7 d7/], },
+    225  => { ascii => "\e[38;5;225m", colours => [qw/ff d7 ff/], },
+    226  => { ascii => "\e[38;5;226m", colours => [qw/ff ff 00/], },
+    227  => { ascii => "\e[38;5;227m", colours => [qw/ff ff 5f/], },
+    228  => { ascii => "\e[38;5;228m", colours => [qw/ff ff 87/], },
+    229  => { ascii => "\e[38;5;229m", colours => [qw/ff ff af/], },
+    230  => { ascii => "\e[38;5;230m", colours => [qw/ff ff d7/], },
+    231  => { ascii => "\e[38;5;231m", colours => [qw/ff ff ff/], },
+    232  => { ascii => "\e[38;5;232m", colours => [qw/08 08 08/], },
+    233  => { ascii => "\e[38;5;233m", colours => [qw/12 12 12/], },
+    234  => { ascii => "\e[38;5;234m", colours => [qw/1c 1c 1c/], },
+    235  => { ascii => "\e[38;5;235m", colours => [qw/26 26 26/], },
+    236  => { ascii => "\e[38;5;236m", colours => [qw/30 30 30/], },
+    237  => { ascii => "\e[38;5;237m", colours => [qw/3a 3a 3a/], },
+    238  => { ascii => "\e[38;5;238m", colours => [qw/44 44 44/], },
+    239  => { ascii => "\e[38;5;239m", colours => [qw/4e 4e 4e/], },
+    240  => { ascii => "\e[38;5;240m", colours => [qw/58 58 58/], },
+    241  => { ascii => "\e[38;5;241m", colours => [qw/62 62 62/], },
+    242  => { ascii => "\e[38;5;242m", colours => [qw/6c 6c 6c/], },
+    243  => { ascii => "\e[38;5;243m", colours => [qw/76 76 76/], },
+    244  => { ascii => "\e[38;5;244m", colours => [qw/80 80 80/], },
+    245  => { ascii => "\e[38;5;245m", colours => [qw/8a 8a 8a/], },
+    246  => { ascii => "\e[38;5;246m", colours => [qw/94 94 94/], },
+    247  => { ascii => "\e[38;5;247m", colours => [qw/9e 9e 9e/], },
+    248  => { ascii => "\e[38;5;248m", colours => [qw/a8 a8 a8/], },
+    249  => { ascii => "\e[38;5;249m", colours => [qw/b2 b2 b2/], },
+    250  => { ascii => "\e[38;5;250m", colours => [qw/bc bc bc/], },
+    251  => { ascii => "\e[38;5;251m", colours => [qw/c6 c6 c6/], },
+    252  => { ascii => "\e[38;5;252m", colours => [qw/d0 d0 d0/], },
+    253  => { ascii => "\e[38;5;253m", colours => [qw/da da da/], },
+    254  => { ascii => "\e[38;5;254m", colours => [qw/e4 e4 e4/], },
+    255  => { ascii => "\e[38;5;255m", colours => [qw/ee ee ee/], },
+);
+}
+
+__DATA__
+
+=head1 NAME
+
+colourtest - Test the 256 colour displaying ability of your terminal
+
+=head1 VERSION
+
+This documentation refers to colourtest version 0.1.
+
+=head1 SYNOPSIS
+
+   colourtest [option]
+
+ OPTIONS:
+  -b --background    Show the colour as the background
+  -m --modifier=str  Modify stuff
+  -r --reverse       Reverse stuff
+
+  -v --verbose       Show more detailed option
+     --version       Prints the version information
+     --help          Prints this help information
+     --man           Prints the full documentation for colourtest
+
+=head1 DESCRIPTION
+
+
+=head1 SUBROUTINES/METHODS
+
+=head1 DIAGNOSTICS
+
+=head1 CONFIGURATION AND ENVIRONMENT
+
+=head1 DEPENDENCIES
+
+=head1 INCOMPATIBILITIES
+
+=head1 BUGS AND LIMITATIONS
+
+There are no known bugs in this module.
+
+Please report problems to Ivan Wills (ivan.wills@gmail.com).
+
+Patches are welcome.
+
+=head1 AUTHOR
+
+Ivan Wills - (ivan.wills@gmail.com)
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2010 Ivan Wills (123 Timbuc Too).
+All rights reserved.
+
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself. See L<perlartistic>.  This program is
+distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.
+
+=cut
+
