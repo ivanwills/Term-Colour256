@@ -9,7 +9,7 @@ package Term::Colour256;
 use strict;
 use warnings;
 use version;
-use Carp;
+use Carp qw/confess longmess/;
 use Scalar::Util;
 use List::Util;
 #use List::MoreUtils;
@@ -43,7 +43,15 @@ sub colour {
     return $out;
 }
 
-*Term::Colour256::color = &colour;
+*Term::Colour256::color = \&colour;
+
+sub coloured {
+    my ( $colours, @string ) = @_;
+
+    return join '', colour( ref $colours eq 'ARRAY' ? @{ $colours } : $colours ), @string, colour('reset');
+}
+
+*Term::Colour256::colored = \&coloured;
 
 sub map_colour {
     my ($colour, $on) = @_;
