@@ -22,17 +22,6 @@ our @EXPORT_OK   = qw/colour coloured color colored/;
 our %EXPORT_TAGS = ();
 #our @EXPORT      = qw//;
 
-sub new {
-	my $caller = shift;
-	my $class  = ref $caller ? ref $caller : $caller;
-	my %param  = @_;
-	my $self   = \%param;
-
-	bless $self, $class;
-
-	return $self;
-}
-
 sub colour {
     my @colours = map { split /\s+|_/, $_ } @_;
     my $out = '';
@@ -54,6 +43,8 @@ sub colour {
     return $out;
 }
 
+*Term::Colour256::color = &colour;
+
 sub map_colour {
     my ($colour, $on) = @_;
     my $value;
@@ -64,11 +55,36 @@ sub map_colour {
     elsif ( $colour =~ /^[a-zA-Z]/ ) {
         $value = map_names()->{$colour} || confess "Unknown colour $colour!";
     }
-    elsif ( my ($rgb) = $colour =~ /^#( [0-9A-Fa-f]{3,6} )$/xms ) {
-        confess "Haven't yet worked out this logic";
+    elsif ( my ($rgb) = $colour =~ /^\#( [0-9A-Fa-f]+ )$/xms ) {
+        my ($r, $g, $b);
+        my $map_rgb = map_rgb();
+        if ( length $rgb == 3 ) {
+            ($r, $g, $b) = split //, $rgb;
+            $r .= $r;
+            $g .= $g;
+            $b .= $b;
+        }
+        elsif ( length $rgb == 6 ) {
+            $r = substr $rgb, 0, 2;
+            $g = substr $rgb, 2, 2;
+            $b = substr $rgb, 4, 2;
+        }
+        else {
+            confess "Bad RGB value #$rgb\n";
+        }
+
+        $r = lc $r;
+        $g = lc $g;
+        $b = lc $b;
+
+        if ( $map_rgb->{$r}{$g}{$b} ) {
+            $value = $map_rgb->{$r}{$g}{$b};
+        }
+        else {
+            confess "Haven't yet worked out this logic ";
+        }
     }
 
-    warn Dumper $value, ref $value;
     $colour = ref $value ? "\e[${$value}m" : $on ? "\e[48;5;${value}m" : "\e[38;5;${value}m";
 
     return $colour;
@@ -381,6 +397,22 @@ sub map_numbers {
         254  => { rgb => [qw/e4 e4 e4/], },
         255  => { rgb => [qw/ee ee ee/], },
     };
+}
+
+{
+    my $rgb;
+    sub map_rgb {
+        return $rgb if $rgb;
+        $rgb = {};
+
+        my $numbers = map_numbers();
+
+        for my $number ( keys %{ $numbers } ) {
+            $rgb->{ $numbers->{$number}{rgb}[0] }{ $numbers->{$number}{rgb}[1] }{ $numbers->{$number}{rgb}[2] } = $number;
+        }
+
+        return $rgb;
+    }
 }
 
 1;
