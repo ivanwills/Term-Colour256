@@ -37,10 +37,10 @@ for my $num ( keys %COLOUR_NUMBERED ) {
     $COLOUR_RGB{$r}{$g}{$b} = { number => $num, ascii => $COLOUR_NUMBERED{$num}{ascii} };
 }
 my %MODIFIERS = (
-	RESET     => '\e[0m',
-	BOLD      => '\e[03;3m',
-	UNDERLINE => '\e[04;3m',
-	BLINK     => '\e[05;3m',
+    RESET     => '\e[0m',
+    BOLD      => '\e[03;3m',
+    UNDERLINE => '\e[04;3m',
+    BLINK     => '\e[05;3m',
 );
 
 main();
