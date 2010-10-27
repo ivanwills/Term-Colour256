@@ -18,9 +18,16 @@ use English qw/ -no_match_vars /;
 use base qw/Exporter/;
 
 our $VERSION     = version->new('0.0.1');
-our @EXPORT_OK   = qw/colour coloured color colored/;
+our @EXPORT_OK   = qw/colour coloured color colored push_colour push_color pop_colour pop_color/;
 our %EXPORT_TAGS = ();
 #our @EXPORT      = qw//;
+
+my $global;
+
+sub new {
+    my ($class) = @_;
+    return bless $class, { colours => [] };
+}
 
 sub colour {
     my @colours = map { split /\s+|_/, $_ } @_;
@@ -52,6 +59,58 @@ sub coloured {
 }
 
 *Term::Colour256::colored = \&coloured;
+
+sub push_colour {
+    my @colours = @_;
+    my $self;
+    my $out;
+
+    if ( $colours[0] eq __PACKAGE__ || ! ref $colours[0] || !$colours[0]->isa(__PACKAGE__) ) {
+        $global ||= __PACKAGE__->new;
+        $self = $global;
+    }
+    else {
+        $self = shift @colours;
+    }
+
+    push @{$self->colours}, '';
+    for ( my $i = 0; $i < @colours; $i++ ) {
+        my $colour;
+        my $on;
+        if ( $colours[$i] eq 'on' ) {
+            $i++;
+            $colour = $colours[$i];
+            $on = 1;
+        }
+        else {
+            $colour = $colours[$i];
+        }
+        $self->colours->[-1] .= map_colour($colour, $on);
+    }
+
+    return $self->colours->[-1];
+}
+
+*Term::Colour256::push_color = \&push_colour;
+
+sub pop_colour {
+    my @colours = @_;
+    my $self;
+    my $out;
+
+    if ( $colours[0] eq __PACKAGE__ || ! ref $colours[0] || !$colours[0]->isa(__PACKAGE__) ) {
+        $global ||= __PACKAGE__->new;
+        $self = $global;
+    }
+    else {
+        $self = shift @colours;
+    }
+    pop @{$self->colours};
+
+    return "\e[0m;" . join '', @{$self->colours};
+}
+
+*Term::Colour256::pop_color = \&pop_colour;
 
 sub map_colour {
     my ($colour, $on) = @_;
@@ -429,54 +488,68 @@ __END__
 
 =head1 NAME
 
-Term::Colour256 - <One-line description of modules purpose>
+Term::Colour256 - Automates generating of colours for 256 colour terminals
 
 =head1 VERSION
 
 This documentation refers to Term::Colour256 version 0.1.
 
-
 =head1 SYNOPSIS
 
    use Term::Colour256;
 
-   # Brief but working code example(s) here showing the most common usage(s)
-   # This section will be as far as many users bother reading, so make it as
-   # educational and exemplary as possible.
+   # colour some text
+   print colour('128') . "colour 128" . colour('reset');
+   # or equivantly
+   print coloured(['128'], 'colour 128');
 
+   print push_color('on' => 96) . ' bg is 96 ' . push_color('192') . ' bg 96, fg 192 ' . pop_color() . ' now just bg 96 ' . pop_color() . 'back to default';
 
 =head1 DESCRIPTION
 
-A full description of the module and its features.
-
-May include numerous subsections (i.e., =head2, =head3, etc.).
-
-
 =head1 SUBROUTINES/METHODS
 
-A separate section listing the public components of the module's interface.
+=head3 C<new ()>
 
-These normally consist of either subroutines that may be exported, or methods
-that may be called on objects belonging to the classes that the module
-provides.
+Return: Term::Colour256 - new object
 
-Name the section accordingly.
+Description: Creates a new object for pushing and popping colours
 
-In an object-oriented module, this section should begin with a sentence (of the
-form "An object of this class represents ...") to give the reader a high-level
-context to help them understand the methods that are subsequently described.
+=head3 C<colour ( @colours )>
 
+Param: @colours - list colours to out put, each element
 
-=head3 C<new ( $search, )>
+Return: string - terminal code to produce the colours
 
-Param: C<$search> - type (detail) - description
+=head3 C<color ( @colours )>
 
-Return: Term::Colour256 -
+Alias for colour.
 
-Description:
+=head3 C<coloured ( $colours, @strings )>
 
-=cut
+Param: $colours - arrayref or string- see C<colour>
 
+Param: @strings - the text to be coloured
+
+Return: string - coloured text
+
+Description: Colours the text and resets the colours after
+
+=head3 C<colored ( $colours, @strings )>
+
+Alias for coloured
+
+=head3 C<push_colour (@colours)>
+
+=head3 C<push_color (@colours)>
+
+Alias for push_colour
+
+=head3 C<pop_colour (@colours)>
+
+=head3 C<pop_color (@colours)>
+
+Alias for pop_colour
 
 =head1 DIAGNOSTICS
 
