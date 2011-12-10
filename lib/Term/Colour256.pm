@@ -1,7 +1,7 @@
 package Term::Colour256;
 
 # Created on: 2010-10-11 13:31:47
-# Create by:  dev
+# Create by:  Ivan Wills
 # $Id$
 # $Revision$, $HeadURL$, $Date$
 # $Revision$, $Source$, $Date$
@@ -592,18 +592,18 @@ The initial template usually just has:
 
 There are no known bugs in this module.
 
-Please report problems to dev (dev@localhost).
+Please report problems to Ivan Wills (ivan.wills@gmail.com).
 
 Patches are welcome.
 
 =head1 AUTHOR
 
-dev - (dev@localhost)
+Ivan Wills - (ivan.wills@gmail.com)
 <Author name(s)>  (<contact address>)
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2010 dev (123 Timbuc Too).
+Copyright (c) 2010 Ivan Wills (14 Mullion Close, Hornsby Heights, NSW Australia 2077).
 All rights reserved.
 
 This module is free software; you can redistribute it and/or modify it under
