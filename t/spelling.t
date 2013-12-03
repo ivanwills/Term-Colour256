@@ -39,5 +39,6 @@ add_stopwords(qw/
     colour
     coloured
     colours
+    RGB
 /);
 all_pod_files_spelling_ok();
