@@ -547,6 +547,23 @@ Alias for push_colour
 
 Alias for pop_colour
 
+=head3 C<map_colour ($colour, $on)>
+
+Maps the C<$colour> to the escape sequence. The C<$on> flags that the colour is
+a background colour if true.
+
+=head3 C<map_names ()>
+
+Returns a hash mapping colour names to colour numbers.
+
+=head3 C<map_numbers ()>
+
+Returns a hash of mappings between escape code and approximate RGB values.
+
+=head3 C<map_rgb ()>
+
+Reverse of C<map_numbers>
+
 =head1 DIAGNOSTICS
 
 A list of every error and warning message that the module can generate (even
