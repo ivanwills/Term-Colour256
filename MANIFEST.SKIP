@@ -72,3 +72,4 @@ vim.sh
 tmp*
 temp*
 errors.err
+^MYMETA\.json$
