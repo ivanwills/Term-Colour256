@@ -3,7 +3,6 @@ Build.PL
 Changes
 lib/Term/Colour256.pm
 LICENSE
-Makefile.PL
 MANIFEST
 META.json
 META.yml
