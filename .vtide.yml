@@ -1,0 +1,28 @@
+---
+# Create by App::VTide::Command::Init Wed Oct 25 18:31:52 2017 VERSION 0.1.5
+count: 4
+default:
+  restart: 0
+  wait: 0
+editor:
+  files:
+    eg:
+      - some-file.eg
+name: term-colour256
+terminals:
+  1a:
+    wait: 0
+    # watch is a list of files (or file groups) to watch for changes and
+    # re-run the command. This watch waits for changes in files in the
+    # lib bin and tests directories and then runs tests
+    watch:
+      - lib
+      - bin
+      - all-tests
+    command: ./Build && ./Build testcover
+  2: []
+
+  3: []
+
+  4: []
+
